@@ -31,10 +31,9 @@ __doc__ = "SELFE Unstructured Grid Ocean Model IO Functions"
 # imports
 #========================================================================    
 import numpy as N
-from scipy.spatial import cKDTree as KDTree
+#from scipy import io
 import numpyIO as io
 import sys
-import os
 
 class Dataset:
     """
@@ -55,7 +54,7 @@ class Dataset:
     @version 0.2
     """
     
-    def __init__(self,fname, nfiles=1):
+    def __init__(self,fname):
         "Initialise by reading header information from file"
         
         self.fname = fname
@@ -64,8 +63,7 @@ class Dataset:
         self.read_hgrid(fid)
         self.data_start_pos=fid.tell()
         self.compute_step_size()
-        self.datadir = os.path.split(fname)[0]
-        self.nfiles = nfiles
+
        
     def read_header(self,fid):
         "Read header information from SELFE binary output file"
@@ -118,8 +116,6 @@ class Dataset:
         self.elem = io.fread(fid,4*self.ne,'i')
         self.elem = self.elem.reshape(self.ne,4)[:,1:4]
 
-        #create kdtree
-        self.kdtree = KDTree(zip(self.x,self.y))
 
     def compute_step_size(self):
         "Compute the data block size to move one timestep within the file"
@@ -135,7 +131,7 @@ class Dataset:
         #compute step size    
         self.step_size  = 2*4 + self.np*4 + self.grid_size*4*self.flag_sv;
     
-    def read_time_series(self,fname,nodes=None,levels=None,xy=N.array([]),nfiles=3,sfile=1,datadir=None):
+    def read_time_series(self,fname,nodes=-1,levels=-1,xy=N.array([]),nfiles=1,sfile=1,datadir='.'):
         """
         Main function to extract a spatial and temporal slice of entire 3D Time series.
         
@@ -164,12 +160,6 @@ class Dataset:
         eta = []
         data = []
 
-        if nfiles is None:
-            nfiles = self.nfiles
-
-        if datadir is None:
-            datadir = self.datadir
-
         #convert xy points to list of nodes,
         #find parent elements &  calculate interpolation weights
         if xy.size!=0:
@@ -184,11 +174,11 @@ class Dataset:
                 
         #set default for nodes to be all nodes
         #node index starts at zero 
-        elif nodes is None:
+        elif nodes==-1:
             nodes = N.arange(self.np)
 
         #set default for level to be all levels
-        if levels is None:
+        if levels==-1:
             levels = N.arange(self.nlevels)
 
         #check whether 2D or 3D variable is being read
@@ -209,26 +199,26 @@ class Dataset:
                     t_iter =  N.append(t_iter, io.fread(fid, 1, 'i'))
                     eta.append(io.fread(fid, self.np, 'f'))
                     tmpdata = io.fread(fid, self.flag_sv*self.grid_size, 'f')
+#                    import pdb; pdb.set_trace()                    
                     tmpdata = tmpdata.reshape(self.np, nlevs, self.flag_sv)
                 #only keep requested slice of tmpdata
                 #i.e. tmpdata[nodes,levels,var]
                     tmpdata = tmpdata[nodes,:,:]
                     tmpdata = tmpdata[:,levels,:]
                     data.append(tmpdata)
-            except:
+            except IOError:
                 continue
+            except ValueError:
+                raise
 #        import pdb; pdb.set_trace()
-        eta = N.column_stack(eta[:]).T
+        eta = N.array(eta)
         eta = eta[:,nodes]
         data = N.array(data)
         dp = self.dp[nodes]
         
         #convert nodal values back to xy point values if needed
         if xy.size!=0:
-            #try:#not sure about this. need to look at it ion more detail put in to remove shape error
             tmpdata = N.zeros((data.shape[0],data.shape[1]/3,data.shape[2],data.shape[3]))/0.
-            #except:
-            #    tmpdata = N.zeros((data.shape[0],data.shape[1]/3,data.shape[2]))/0.
             tmpeta = N.zeros((eta.shape[0],eta.shape[1]/3))/0.
             tmpdp = N.zeros(dp.shape[0]/3)/0.
             for i in range(xy.shape[0]):
@@ -316,39 +306,4 @@ class Dataset:
                     step_size[i,k,m] = count
                     
             
-    def read_time_series_xy(self, variable, x, y, sigma_level='middle', return_eta=False):
-        """
-        finds nearest 3 nodes to x,y and returns the average value
-        """
-        xy = N.hstack((x,y))
-        dist, nodes = self.kdtree.query(xy, k=3)
-        data = []
-
-        if sigma_level=='average':
-            t, t_iter, eta, dp, data = self.read_time_series(variable, nodes=nodes)
-            eta = eta.mean(axis=1)
-            data = data[:,:,:,0].mean(axis=2).mean(axis=1)
-            data = data.mean(axis=1).mean(axis=1) #take average of all levels and then 3 nodes for now. implement idw or area wieghted average later
-            if return_eta:
-                return [N.column_stack((t,data)), N.column_stack((t,eta))]
-            else:
-                return N.column_stack((t,data))
-            
-        elif sigma_level=='top':
-            sigma_level = 0
-        elif sigma_level=='bottom':
-            sigma_level = self.nlevels - 1 
-        elif sigma_level=='middle':
-            sigma_level = self.nlevels/2
-#        import pdb; pdb.set_trace()
-        t, t_iter, eta, dp, data = self.read_time_series(variable, nodes=nodes, levels=sigma_level)
-        eta = eta.mean(axis=1)
-        data = data[:,:,0,:].mean(axis=1)
-        #data.mean(axis=1).shape[:,0,:]
-        #data = data.mean(axis=1) #take average of all levels and then 3 nodes for now. implement idw or area wieghted average later
-#        import pdb; pdb.set_trace()
-        if return_eta:
-            return [N.column_stack((t,data)), N.column_stack((t,eta))]
-        else:
-            return N.column_stack((t,data))
-        
+    
