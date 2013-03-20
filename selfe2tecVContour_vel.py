@@ -16,55 +16,74 @@
 
 programname = "selfe2tecVContour.py";
 
-# load required modules
-import struct
+import os
 import sys
-import subprocess
-from numpy import *
-from scipy import *
-from pylab import *
-from string import *
-import datetime
+import platform
 
-#This function takes Bash commands and returns them
-def runBash(cmd):
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    out = p.stdout.read().strip()
-    return out  #This is the stdout from the shell command
+import numpy as np
+import shapefile
 
-if len(sys.argv)==1 or sys.argv[1]=='help' or sys.argv[1]=='-help' or sys.argv[1
-]=='--help' :
-    location=runBash("which " + programname)  
-    message = runBash("awk \'/^##/ {print $0}\' < " + location);
-    sys.exit(message)  
-
-#sys.path.append('/home/snegusse/bin')        
+sys.path.append('/home/snegusse/pyselfe')        
 import pyselfe
 
-#read in command line variables
-datadir=sys.argv[1]
-tecfile=sys.argv[2]
-param=sys.argv[3]
-profilefile=sys.argv[4]
-nfile=int(sys.argv[5])
+def read_curtain_shapefile(curtain_shapefile):
+    line = shapefile.Reader(curtain_shapefile)
+    curtain_coords = np.array([s.points for s in line.shapes()])
+    cx = curtain_coords[:,:,0].ravel()
+    cy = curtain_coords[:,:,1].ravel()
+    return cx, cy
+    
+def calc_channel_orientation(cx, cy):
+    cx_delta = (cx[:-1] - cx[1:])
+    cy_delta = (cy[:-1] - cy[1:])
+    segment_length = np.hypot(cx_delta, cy_delta)
+    cos_theta = cx_delta / segment_length
+    theta_deg = np.arccos(cos_theta) * 180. / np.pi
+    sin_theta = cy_delta / segment_length
+    neg_sin_theta_ind = sin_theta < 0.
+    theta_deg[neg_sin_theta_ind] *= -1
+    theta_deg *= -1
+    return theta_deg
+    
 
-model = pyselfe.Dataset(datadir + '/1_'+param)
+#read in command line variables
+if platform.system() == 'Linux':
+    base_dir = '/home/snegusse/brazos_river/'
+
+data_dir = os.path.join(base_dir, 'calibration_20080824','base_case',
+                        'outputs')
+tec_filename = 'cal_test.dat'
+curtain_filename = 'brazos_centerline.shp'  
+
+curtain_file = os.path.join(data_dir, curtain_filename)
+tec_file = os.path.join(data_dir, tec_filename)
+param = 'hvel.64'
+sfile = 1
+nfile = 1
+
+model = pyselfe.Dataset(os.path.join(data_dir, str(sfile) + '_' + param))
+
 
 # Read in xy/node locations of profile line
+cx, cy = read_curtain_shapefile(curtain_file)
+channel_orientation = calc_channel_orientation(cx, cy)
 
-xy = loadtxt(profilefile,skiprows=7,usecols=(0,1),unpack=True)
-nxy = xy.shape[1]
-xy=xy.transpose()
+#take every third point and remove points upstream of bz2
+cx = cx[::3][:30]
+cy = cx[::3][:30]
+xy = np.column_stack(cx, cy)
+nxy = xy.shape[0]
 
 # Read all time series data for set of xy
 # level = nlevel - 1 because of zero indexing
-[t,t_iter,eta,dp,data] = model.read_time_series(param,xy=xy,nfiles=nfile,datadir=datadir)
+[t,t_iter,eta,dp,data] = model.read_time_series(param,xy=xy, nfiles=nfile,
+                                                datadir=data_dir, sfile=sfile)
 # -----------------------------------------
 
 #generate xz values for each timestep
-sLevels = hstack([-1.0,model.slevels])
-Z = zeros((t.size,nxy,model.nlevels))/0.0
-Z0 = zeros((nxy,model.nlevels))/0.0
+sLevels = np.row_stack([-1.0,model.slevels])
+Z = np.zeros((t.size,nxy,model.nlevels))/0.0
+Z0 = np.zeros((nxy,model.nlevels))/0.0
 for time in range(t.size):
     H = dp + eta[time,:]
     for node in range(nxy):
@@ -75,26 +94,27 @@ for time in range(t.size):
 D=[]
 D.append(0)
 dist = 0
-for i in range(1,xy.shape[0]):
-    dist = dist + sqrt((xy[i,0]-xy[i-1,0])**2 + (xy[i,1]-xy[i-1,1])**2)
+for i in range(1, nxy):
+    dist = dist + np.hypot((xy[i,0]-xy[i-1,0]),(xy[i,1]-xy[i-1,1]))
     D.append(dist)
     
 X=[]
 for lev in range(model.nlevels):
     X.append(D)
 
-X = array(X).transpose()
+X = np.array(X).transpose()
 #X = X.transpose().ravel()
 #X = X.ravel()
 
 
 header = []
-header.append('TITLE = Selfe Vertical Profile : ' + strip(model.version) + ', ' + profilefile)
+header.append('TITLE = Selfe Vertical Profile : ' + (model.version).strip() + \
+                ', ' + curtain_filename)
 
 variables = {'salt.63': '\"Sal\"',
              'temp.63': '\"Temp\"',
              'vert.63': '\"W\"',
-             'hvel.64': '\"Vel\"'}[strip(model.var_type)]
+             'hvel.64': '\"Vel\"'}[(model.var_type).strip()]
 
 header.append('Variables = \"X\", \"Z\", ' + variables + ', \"W\"')
 zonetype = 'I=' + nxy.__str__() \
@@ -103,7 +123,7 @@ zonetype = 'I=' + nxy.__str__() \
 header.append('ZONE T=\"0.0\"' + zonetype + ', SOLUTIONTIME=0.0')
 
 #Write ZONE 1
-fid = open(tecfile,'w')
+fid = open(tec_file,'w')
 for txt in header:
     fid.write(txt + '\n')
 
@@ -118,11 +138,12 @@ for dt in range(t.size):
     fid.write(zone)
     Z0=Z[dt,:,:]
     for j in range(model.nlevels):
-        for i in range(nxy):
+        for i in range(1,nxy):
             vx_en = data[dt,i,j,0]
             vy_en = data[dt,i,j,1]
-            vx_xy = vy_en*cos(np.pi*12.5/180)+vx_en*sin(np.pi*12.5/180)
-            vy_xy = vy_en*sin(np.pi*12.5/180)+vx_en*cos(np.pi*12.5/180)
+            vx_xy = vx_en * np.cos(channel_orientation[i]) - vy_en * \
+                    np.sin(channel_orientation[i]) 
+            vy_xy = 0
             fid.write(X[i,j].__str__() + ' ' + Z0[i,j].__str__() + ' ' + (vx_xy).__str__() + ' '
                       + 0.0.__str__() + '\n')
 fid.close()
