@@ -34,8 +34,8 @@ def read_curtain_shapefile(curtain_shapefile):
     return cx, cy
     
 def calc_channel_orientation(cx, cy):
-    cx_delta = (cx[:-1] - cx[1:])
-    cy_delta = (cy[:-1] - cy[1:])
+    cx_delta = (cx[1:] - cx[:-1])
+    cy_delta = (cy[1:] - cy[:-1])
     segment_length = np.hypot(cx_delta, cy_delta)
     cos_theta = cx_delta / segment_length
     theta_deg = np.arccos(cos_theta) * 180. / np.pi
@@ -43,35 +43,41 @@ def calc_channel_orientation(cx, cy):
     neg_sin_theta_ind = sin_theta < 0.
     theta_deg[neg_sin_theta_ind] *= -1
     theta_deg *= -1
+    theta_deg = np.insert(theta_deg, 0, theta_deg[0]) # assuming that the orientation at the first two points is the same for simplicity.
     return theta_deg
     
 
 #read in command line variables
 if platform.system() == 'Linux':
-    base_dir = '/home/snegusse/brazos_river/'
+    base_dir = '/home/snegusse/modeling/brazos_river'
 
 data_dir = os.path.join(base_dir, 'calibration_20080824','base_case',
                         'outputs')
 tec_filename = 'cal_test.dat'
 curtain_filename = 'brazos_centerline.shp'  
 
-curtain_file = os.path.join(data_dir, curtain_filename)
+curtain_file = os.path.join(base_dir, curtain_filename)
 tec_file = os.path.join(data_dir, tec_filename)
 param = 'hvel.64'
 sfile = 1
-nfile = 1
+nfile = 48
 
 model = pyselfe.Dataset(os.path.join(data_dir, str(sfile) + '_' + param))
 
 
 # Read in xy/node locations of profile line
 cx, cy = read_curtain_shapefile(curtain_file)
-channel_orientation = calc_channel_orientation(cx, cy)
 
 #take every third point and remove points upstream of bz2
-cx = cx[::3][:30]
-cy = cx[::3][:30]
-xy = np.column_stack(cx, cy)
+cx = cx[::-1]
+cy = cy[::-1]
+
+cx = cx[::3][-550:]
+cy = cy[::3][-550:]
+
+channel_orientation = calc_channel_orientation(cx, cy)
+
+xy = np.column_stack((cx, cy))
 nxy = xy.shape[0]
 
 # Read all time series data for set of xy
@@ -81,7 +87,7 @@ nxy = xy.shape[0]
 # -----------------------------------------
 
 #generate xz values for each timestep
-sLevels = np.row_stack([-1.0,model.slevels])
+sLevels = np.hstack([-1.0,model.slevels])
 Z = np.zeros((t.size,nxy,model.nlevels))/0.0
 Z0 = np.zeros((nxy,model.nlevels))/0.0
 for time in range(t.size):
@@ -138,11 +144,11 @@ for dt in range(t.size):
     fid.write(zone)
     Z0=Z[dt,:,:]
     for j in range(model.nlevels):
-        for i in range(1,nxy):
+        for i in range(nxy):
             vx_en = data[dt,i,j,0]
             vy_en = data[dt,i,j,1]
-            vx_xy = vx_en * np.cos(channel_orientation[i]) - vy_en * \
-                    np.sin(channel_orientation[i]) 
+            vx_xy = vx_en * np.cos(channel_orientation[i] * np.pi / 180.) - \
+            vy_en * np.sin(channel_orientation[i] * np.pi / 180.) 
             vy_xy = 0
             fid.write(X[i,j].__str__() + ' ' + Z0[i,j].__str__() + ' ' + (vx_xy).__str__() + ' '
                       + 0.0.__str__() + '\n')
