@@ -131,7 +131,7 @@ class Dataset:
         #compute step size    
         self.step_size  = 2*4 + self.np*4 + self.grid_size*4*self.flag_sv;
     
-    def read_time_series(self,fname,nodes=-1,levels=-1,xy=N.array([]),nfiles=1,sfile=1,datadir='.'):
+    def read_time_series(self,fname,nodes=None,levels=-1,xy=N.array([]),nfiles=1,sfile=1,datadir='.'):
         """
         Main function to extract a spatial and temporal slice of entire 3D Time series.
         
@@ -159,7 +159,7 @@ class Dataset:
         t_iter = N.array([])
         eta = []
         data = []
-
+    
         #convert xy points to list of nodes,
         #find parent elements &  calculate interpolation weights
         if xy.size!=0:
@@ -171,10 +171,9 @@ class Dataset:
                 parent, tmparco, node3 = self.find_parent_element(xy00[0],xy00[1])
                 nodes = N.append(nodes,node3-1)
                 arco = N.append(arco,tmparco)
-                
         #set default for nodes to be all nodes
         #node index starts at zero 
-        elif nodes==-1:
+        elif nodes==None:
             nodes = N.arange(self.np)
 
         #set default for level to be all levels
@@ -206,6 +205,7 @@ class Dataset:
                     tmpdata = tmpdata[nodes,:,:]
                     tmpdata = tmpdata[:,levels,:]
                     data.append(tmpdata)
+                print "file " + fname1 + "out of " + str(nfiles) + " read"
             except IOError:
                 continue
             except ValueError:
