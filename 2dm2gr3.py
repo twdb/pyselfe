@@ -27,30 +27,14 @@ import numpy as np
 import glob
 
 if platform.system() == 'Linux':
-    grid_data_dir = '/T/BaysEstuaries/USERS/SNegusse/Grids/brazos_river/historical_geometry/post_realignment_no_giww'
+    grid_data_dir = '/T/BaysEstuaries/USERS/SNegusse/Grids/brazos_river/final_verification_grid'
 else:
-    grid_data_dir = 'T:\\BaysEstuaries\\USERS\\SNegusse\\Brazos\\input_for_joseph\\brazos_river_model_part2\\grid_no_giww'
+    grid_data_dir = '/T/BaysEstuaries/USERS/SNegusse/Brazos/input_for_joseph/brazos_river_model_part2/grid_no_giww'
 
-number_of_boundaries = 4
+number_of_boundaries = 0
 
-grid_files = glob.glob(os.path.join(grid_data_dir, '*.2dm'))
-#files = [os.path.join(dir, 'hgrid_1m_min.2dm')]
-
-# historical scenarios with just Brazos and Ocean boundayr"
-boundarytype = {1: ('river', 'brazos river'), 
-                2: ('ocean', 'gom'),
-                88: ('land', 'external land')}
-
-"""
-boundarytype = {1: ('river', 'brazos river'), 
-                2: ('ocean', 'gom'),
-                3: ('return', 'ups giww'),
-                4: ('return', 'downs dow'),
-                5: ('return', ' dow1'),
-                6: ('return', 'dow23'),
-                7: ('return', 'ups dow'),
-                8: ('return', 'ups dow2'),
-                99: ('land', 'external land')} 
+#grid_files = glob.glob(os.path.join(grid_data_dir, '*.2dm'))
+grid_files = [os.path.join(grid_data_dir, 'hgrid_no_bound.2dm')]
 
 boundarytype = {1: ('river', 'brazos river'), 
                 2: ('river', 'san bernard'), 
@@ -64,7 +48,24 @@ boundarytype = {1: ('river', 'brazos river'),
                 10: ('return', 'ups dow'),
                 11: ('return', 'ups dow2'),
                 88: ('land', 'external land'),                      
-                99: ('land', 'island boundary'),}   
+                99: ('land', 'island boundary'),} 
+
+# historical scenarios with just Brazos and Ocean boundayr"
+"""
+boundarytype = {1: ('river', 'brazos river'), 
+                2: ('ocean', 'gom'),
+                88: ('land', 'external land')}
+
+boundarytype = {1: ('river', 'brazos river'), 
+                2: ('ocean', 'gom'),
+                3: ('return', 'ups giww'),
+                4: ('return', 'downs dow'),
+                5: ('return', ' dow1'),
+                6: ('return', 'dow23'),
+                7: ('return', 'ups dow'),
+                8: ('return', 'ups dow2'),
+                88: ('land', 'external land')} 
+ 
 boundarytype = {1: ('river', 'brazos river'), 
                 2: ('river', 'san bernard'), 
                 3: ('discharge', 'dow outfall1'),

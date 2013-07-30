@@ -58,7 +58,7 @@ except ValueError:
                                                         nfiles=nfile,
                                                         sfile=1,
                                                         datadir=datadir)
-#        data = data[:,:,1:,:].mean(axis=2)
+        data = data[:,:,1:,:].mean(axis=2)
                                                     
 
 header = []
