@@ -19,7 +19,7 @@ programname = "selfe2tec2D.py";
 import os
 import struct
 import sys
-sys.path.append('/home/snegusse/')
+sys.path.append('/home/snegusse/test')
 from string import strip
 
 from numpy import *
