@@ -52,16 +52,16 @@ def calc_channel_orientation(cx, cy):
 if platform.system() == 'Linux':
     base_dir = '/home/snegusse/modeling/brazos_river'
 
-data_dir = os.path.join(base_dir, 'calibration_20080824','shoal_sensitivity',
-                        'const_8m_dp_braz_tvd_base_grid', 'outputs')
-tec_filename = 'salt_curt.dat'
+data_dir = os.path.join(base_dir, 'calibration_20080824',
+                        'reduced_diffmax_sensitivity/cal_20080824_lower_diffmax/outputs')
+tec_filename = 'tdff_curt.dat'
 curtain_filename = 'brazos_centerline.shp'  
 
 curtain_file = os.path.join(base_dir, curtain_filename)
 tec_file = os.path.join(data_dir, tec_filename)
-param = 'salt.63'
+param = 'tdff.63'
 sfile = 1
-nfile = 8
+nfile = 1
 
 model = pyselfe.Dataset(os.path.join(data_dir, str(sfile) + '_' + param))
 
@@ -74,8 +74,8 @@ cx = cx[::-1]
 cy = cy[::-1]
 
 
-cx = cx[::3][-550:]
-cy = cy[::3][-550:]
+cx = cx[::3][-10:]
+cy = cy[::3][-10:]
 
 channel_orientation = calc_channel_orientation(cx, cy)
 
@@ -121,7 +121,10 @@ header.append('TITLE = Selfe Vertical Profile : ' + (model.version).strip() \
 variables = {'salt.63': '\"Sal\"',
              'temp.63': '\"Temp\"',
              'vert.63': '\"W\"',
-             'hvel.64': '\"Vel\"'}[(model.var_type).strip()]
+             'hvel.64': '\"Vel\"',
+             'tdff.63': '\"tdff"',
+             'vdff.63': '\"vdff"'
+             }[(model.var_type).strip()]
 
 header.append('Variables = \"X\", \"Z\", ' + variables)
 zonetype = 'I=' + nxy.__str__() \
