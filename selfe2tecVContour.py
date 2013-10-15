@@ -52,15 +52,14 @@ def calc_channel_orientation(cx, cy):
 if platform.system() == 'Linux':
     base_dir = '/home/snegusse/modeling/brazos_river'
 
-data_dir = os.path.join(base_dir, 'calibration_20080824',
-                        'reduced_diffmax_sensitivity/cal_20080824_lower_diffmax/outputs')
+data_dir = '/home/snegusse/tmp'
 tec_filename = 'tdff_curt.dat'
 curtain_filename = 'brazos_centerline.shp'  
 
 curtain_file = os.path.join(base_dir, curtain_filename)
 tec_file = os.path.join(data_dir, tec_filename)
 param = 'tdff.63'
-sfile = 1
+sfile = 19
 nfile = 1
 
 model = pyselfe.Dataset(os.path.join(data_dir, str(sfile) + '_' + param))
