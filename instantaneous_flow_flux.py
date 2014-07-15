@@ -30,8 +30,11 @@ base_dir = '/home/snegusse/modeling/brazos_river/historical_scenarios'
 mod_dir = os.path.join(base_dir, 'calibration_period/post_realignment_no_giww')
 #'fine': os.path.join(base_dir, 'grid_convergence', 'fine_grid_tvd',
 #                                'outputs')}
-sal_init_file = str(sfile) + '_salt.63'
-vel_init_file = str(sfile) + '_hvel.64'
+sal_init_filename = str(sfile) + '_salt.63'
+vel_init_filename = str(sfile) + '_hvel.64'
+
+sal_init_file = os.path.join(mod_dir,sal_init_filename)
+vel_init_file = os.path.join(mod_dir, vel_init_filename)
 """
 #based on joseph's grid'
 profile_nodes = {'river_boundary': np.array([51,50,49,52]),
@@ -76,8 +79,7 @@ sites_dp_data = {}
 salt_flux = {}
 flow_cfs = {}
 
-mod_initial = (pyselfe.Dataset(os.path.join(mod_dir,sal_init_file)), 
-               pyselfe.Dataset(os.path.join(mod_dir, vel_init_file)),)
+mod_initial = (sal_init_file, vel_init_file)
 [sal_t, tstep, eta, dp, sal_data] = \
 mod_initial[0].read_time_series('salt.63', nfiles=nfiles, 
                              datadir=mod_dir, sfile=sfile)   

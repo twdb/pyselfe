@@ -205,7 +205,7 @@ class Dataset:
                     tmpdata = tmpdata[nodes,:,:]
                     tmpdata = tmpdata[:,levels,:]
                     data.append(tmpdata)
-                print "file " + fname1 + "out of " + str(nfiles) + " read"
+                print "file " + fname1 + " out of " + str(nfiles) + " read"
             except IOError:
                 continue
             except ValueError:
