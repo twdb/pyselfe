@@ -32,6 +32,7 @@ __doc__ = "SELFE Unstructured Grid Ocean Model IO Functions"
 #========================================================================    
 import numpy as N
 #from scipy import io
+np = N
 import numpyIO as io
 import sys
 
@@ -158,7 +159,8 @@ class Dataset:
         t = N.array([])
         t_iter = N.array([])
         eta = []
-        data = []
+        data = np.zeros((self.nsteps, self.np, self.nlevels, self.flag_sv))
+#        data = []
     
         #convert xy points to list of nodes,
         #find parent elements &  calculate interpolation weights
@@ -204,16 +206,19 @@ class Dataset:
                 #i.e. tmpdata[nodes,levels,var]
                     tmpdata = tmpdata[nodes,:,:]
                     tmpdata = tmpdata[:,levels,:]
-                    data.append(tmpdata)
+                    data[i,:,:,:] = tmpdata
+#                    data.append(tmpdata)
                 print "file " + fname1 + " out of " + str(nfiles) + " read"
             except IOError:
                 continue
             except ValueError:
                 raise
 #        import pdb; pdb.set_trace()
-        eta = N.array(eta)
-        eta = eta[:,nodes]
-        data = N.array(data)
+#        eta = N.array(eta)
+#        eta = eta[:,nodes]
+#        data = N.array(data)
+ #       data = data[:,nodes,levels,:]
+        
         dp = self.dp[nodes]
         
         #convert nodal values back to xy point values if needed
@@ -232,7 +237,9 @@ class Dataset:
             eta = tmpeta
             dp = tmpdp
         
-        return [t,t_iter,eta,dp,data]
+#        return [t,t_iter,eta,dp,data]
+        return [t,t_iter,data]
+
 
     def find_parent_element(self,x00,y00):
         """
