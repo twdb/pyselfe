@@ -158,8 +158,8 @@ class Dataset:
         #initialize vars
         t = N.array([])
         t_iter = N.array([])
-        eta = []
-        data = np.zeros((self.nsteps, self.np, self.nlevels, self.flag_sv))
+        eta = np.zeros((self.nsteps * nfiles, self.np))
+        data = np.zeros((self.nsteps * nfiles, self.np, self.nlevels, self.flag_sv))
 #        data = []
     
         #convert xy points to list of nodes,
@@ -195,18 +195,20 @@ class Dataset:
                 fname1 = datadir + '/' + str(files) + '_' + fname
                 fid = open(fname1,'rb')
                 fid.seek(self.data_start_pos)
-                for i in N.arange(self.nsteps):                
+                for i in N.arange(self.nsteps):    
+                    time_index = (files - 1) * self.nsteps + i
                     t = N.append(t, io.fread(fid, 1, 'f'))
                     t_iter =  N.append(t_iter, io.fread(fid, 1, 'i'))
-                    eta.append(io.fread(fid, self.np, 'f'))
+                    eta[time_index, :] = io.fread(fid, self.np, 'f')
                     tmpdata = io.fread(fid, self.flag_sv*self.grid_size, 'f')
 #                    import pdb; pdb.set_trace()                    
                     tmpdata = tmpdata.reshape(self.np, nlevs, self.flag_sv)
                 #only keep requested slice of tmpdata
                 #i.e. tmpdata[nodes,levels,var]
-                    tmpdata = tmpdata[nodes,:,:]
-                    tmpdata = tmpdata[:,levels,:]
-                    data[i,:,:,:] = tmpdata
+#                    tmpdata = tmpdata[:,:,:]
+#                    tmpdata = tmpdata[:,:,:]
+#                    import pdb; pdb.set_trace()
+                    data[time_index,:,:,:] = tmpdata
 #                    data.append(tmpdata)
                 print "file " + fname1 + " out of " + str(nfiles) + " read"
             except IOError:
@@ -214,11 +216,14 @@ class Dataset:
             except ValueError:
                 raise
 #        import pdb; pdb.set_trace()
-#        eta = N.array(eta)
-#        eta = eta[:,nodes]
+        eta = N.array(eta)
+        eta = eta[:,nodes]
 #        data = N.array(data)
- #       data = data[:,nodes,levels,:]
+ #       import pdb; pdb.set_trace()
+        data = data[:,nodes,:,:]
+        data = data[:,:,levels,:]
         
+        print "data reading completed."
         dp = self.dp[nodes]
         
         #convert nodal values back to xy point values if needed
@@ -237,8 +242,7 @@ class Dataset:
             eta = tmpeta
             dp = tmpdp
         
-#        return [t,t_iter,eta,dp,data]
-        return [t,t_iter,data]
+        return [t,eta,dp,data]
 
 
     def find_parent_element(self,x00,y00):
